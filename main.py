@@ -11,6 +11,7 @@ from db import (
     add_flight,
     add_flights_bulk,
     delete_min_date_max_date,
+    check_mail_id,
 )
 import datetime
 
@@ -103,12 +104,15 @@ def main():
                     link = match.group(0)
                     print(f"Link found: {link}")
 
-                    # SSL SERTİFİKA DEVRE DIŞI BIRAK
-                    response = requests.get(link, verify=False)
+                    response = requests.get(
+                        link, verify=False
+                    )  # SSL SERTİFİKA DEVRE DIŞI BIRAK
                     filename = link.split("/")[-1]
                     with open(filename, "wb") as f:
                         f.write(response.content)
                     print(f"File {filename} successfully downloaded.")
+
+                    mail_id = filename.split("_")[-1].replace(".zip", "")
 
                     extract_to = "."
                     os.makedirs(extract_to, exist_ok=True)
@@ -131,14 +135,18 @@ def main():
                     print(f"proccess işlemi bitti toplam zaman {finish_process} ")
                     db = next(get_db())
 
+                    if check_mail_id(db, mail_id):
+                        print("Mail already process continue ..")
+                        continue
+
                     print("Start delete time = ", datetime.datetime.now())
-                    delete_min_date_max_date(db, flights_data)
+                    delete_min_date_max_date(db, finish_process, flights_data, mail_id)
                     print("Fİnish delete time = ", datetime.datetime.now())
 
                     start_db_insert = datetime.datetime.now()
 
                     print(f"İnsert db start time = {start_db_insert}")
-                    add_flights_bulk(flights_data)
+                    add_flights_bulk(db, finish_process, mail_id, flights_data)
                     finish_db_insert = datetime.datetime.now()
                     print(f"Finish insert db time = {finish_db_insert}")
                     total_insert_db_time = datetime.datetime.now() - start_db_insert
@@ -151,25 +159,6 @@ def main():
                 print(
                     f"Email from {item.sender.email_address} does not match the specified sender."
                 )
-
-        # Sertifika indirme
-        #     if match:
-        #         if match:
-        #             link = match.group(0)
-        #             print(f"Link found: {link}")
-
-        #
-        #             response = requests.get(link, verify="/path/to/your/certificate.pem")
-        #             filename = link.split("/")[-1]
-        #             with open(filename, "wb") as f:
-        #                 f.write(response.content)
-        #             print(f"File {filename} successfully downloaded.")
-        #         else:
-        #             print("No link found in the email body.")
-        # else:
-        #     print(
-        #         f"Email from {item.sender.email_address} does not match the specified sender."
-        #     )
 
 
 if __name__ == "__main__":

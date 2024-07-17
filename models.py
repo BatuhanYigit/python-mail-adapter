@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Date
+from sqlalchemy import Column, Integer, String, Date, Interval, TIMESTAMP
 from sqlalchemy.ext.declarative import declarative_base
 
 Base = declarative_base()
@@ -16,3 +16,16 @@ class Flight(Base):
     DestinationAirportCode = Column(String(5))
     Seat = Column(Integer)
     Date = Column(Date)
+
+
+class Log(Base):
+    __tablename__ = "logs"
+    id = Column(Integer, primary_key=True, index=True)
+    process_time = Column(TIMESTAMP, nullable=False)
+    country_code = Column(String(5), nullable=False)
+    min_date = Column(Date)
+    max_date = Column(Date)
+    process_csv_duration = Column(Interval)
+    insert_duration = Column(Interval)
+    mail_id = Column(String(50))
+    operation_type = Column(String(10), nullable=False)

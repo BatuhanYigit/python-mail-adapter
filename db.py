@@ -2,10 +2,11 @@ import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from dotenv import load_dotenv
-from models import Base, Flight
+from models import Base, Flight, Log
 import psycopg2
 from psycopg2.extras import execute_values
 import pandas as pd
+import datetime
 
 load_dotenv()
 
@@ -43,7 +44,7 @@ def add_flight(db, flight_data):
     return new_flight
 
 
-def delete_min_date_max_date(db, flights_data):
+def delete_min_date_max_date(db, finish_process, flights_data, mail_id):
     df = pd.DataFrame(flights_data)
     df["Date"] = pd.to_datetime(df["Date"])
 
@@ -58,11 +59,27 @@ def delete_min_date_max_date(db, flights_data):
         print(
             f"Ülke: {row['OriginCountryCode']}, Min Tarih: {row['min']}, Max Tarih: {row['max']}"
         )
+        log_operation(
+            db,
+            datetime.datetime.now(),
+            row["OriginCountryCode"],
+            row["min"],
+            row["max"],
+            finish_process,
+            None,
+            "delete",
+            mail_id,
+        )
 
 
-def add_flights_bulk(flights_data, batch_size=10000):
+def check_mail_id(db, mail_id):
+    return db.query(Log).filter(Log.mail_id == mail_id).first()
+
+
+def add_flights_bulk(db, process_time, mail_id, flights_data, batch_size=10000):
     connection = engine.connect()
     trans = connection.begin()
+    start_insert = datetime.datetime.now()
 
     print(f"Table Name: {Flight.__tablename__}")
     print("Column Names:", Flight.__table__.columns.keys())
@@ -89,6 +106,46 @@ def add_flights_bulk(flights_data, batch_size=10000):
 
     trans.commit()
     connection.close()
+    finish_insert = datetime.datetime.now()
+    total_insert_time = finish_insert - start_insert
+
+    log_operation(
+        db,
+        datetime.datetime.now(),
+        values[0]["OriginCountryCode"],
+        min(flight["Date"] for flight in values),
+        max(flight["Date"] for flight in values),
+        None,
+        total_insert_time,
+        "insert",
+        mail_id,
+    )
+
+
+# Log
+def log_operation(
+    db,
+    process_time,
+    country_code,
+    min_date,
+    max_date,
+    process_duration,
+    insert_duration,
+    operation_type,
+    mail_id,
+):
+    log_entry = Log(
+        process_time=process_time,
+        country_code=country_code,
+        min_date=min_date,
+        max_date=max_date,
+        process_duration=process_duration,
+        insert_duration=insert_duration,
+        mail_id=mail_id,
+        operation_type=operation_type,
+    )
+    db.add(log_entry)
+    db.commit()
 
 
 def get_flights(db):

@@ -5,7 +5,14 @@ import zipfile
 import pandas as pd
 from exchangelib import Credentials, Account, DELEGATE, Message, HTMLBody
 from dotenv import load_dotenv
-from db import create_tables, get_db, add_flight, add_flights_bulk
+from db import (
+    create_tables,
+    get_db,
+    add_flight,
+    add_flights_bulk,
+    delete_min_date_max_date,
+)
+import datetime
 
 load_dotenv()
 
@@ -40,28 +47,10 @@ def mark_read_mail(item):
     print(f"Mail '{item.subject}' readed")
 
 
-# csv dönüştürme
-# def process_csv(file_path):
-#     df = pd.read_csv(file_path)
-#     db = next(get_db())
-#     for _, row in df.iterrows():
-#         flight_data = {
-#             "OriginCountryCode": row["DepIATACtry"],
-#             "OriginCityCode": row["DepCity"],
-#             "OriginAirportCode": row["DepAirport"],
-#             "AirlineCode": row["Carrier1"],
-#             "DestinationCountryCode": row["ArrIATACtry"],
-#             "DestinationCityCode": row["ArrCity"],
-#             "DestinationAirportCode": row["ArrAirport"],
-#             "Seat": row["Seats (Total)"],
-#             "Date": row["Time series"],
-#         }
-#         add_flight(db, flight_data)
-#     print(f"First data insert data from {file_path}")
-
-
+# Csv Process
 def process_csv(file_path):
     df = pd.read_csv(file_path)
+    df["Time series"] = pd.to_datetime(df["Time series"])
     flights_data = []
     for _, row in df.iterrows():
         flight_data = {
@@ -76,7 +65,20 @@ def process_csv(file_path):
             "Date": row["Time series"],
         }
         flights_data.append(flight_data)
+
     return flights_data
+
+
+# Find min date max date
+def find_min_date_max_date(flights_data):
+    df = pd.DataFrame(flights_data)
+    df["Date"] = pd.to_datetime(df["Date"])
+
+    result = df.groupby("OriginCountryCode")["Date"].agg(["min", "max"]).reset_index()
+    for _, row in result.iterrows():
+        print(
+            f"Ülke: {row['OriginCountryCode']}, Min Tarih: {row['min']}, Max Tarih: {row['max']}"
+        )
 
 
 def main():
@@ -115,9 +117,32 @@ def main():
                     csv_file = [
                         f for f in os.listdir(extract_to) if f.endswith(".csv")
                     ][0]
+
+                    start_process = datetime.datetime.now()
+
+                    print(f"proccess işlemi başladı zaman = {start_process} ")
+
                     flights_data = process_csv(csv_file)
 
+                    finish_process = datetime.datetime.now() - start_process
+
+                    print(f"proccess işlemi bitti zaman = {datetime.datetime.now()} ")
+
+                    print(f"proccess işlemi bitti toplam zaman {finish_process} ")
+                    db = next(get_db())
+
+                    print("Start delete time = ", datetime.datetime.now())
+                    delete_min_date_max_date(db, flights_data)
+                    print("Fİnish delete time = ", datetime.datetime.now())
+
+                    start_db_insert = datetime.datetime.now()
+
+                    print(f"İnsert db start time = {start_db_insert}")
                     add_flights_bulk(flights_data)
+                    finish_db_insert = datetime.datetime.now()
+                    print(f"Finish insert db time = {finish_db_insert}")
+                    total_insert_db_time = datetime.datetime.now() - start_db_insert
+                    print(f"Finish total db insert time = {total_insert_db_time}")
 
                     mark_read_mail(item)
                 else:

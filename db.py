@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 from models import Base, Flight
 import psycopg2
 from psycopg2.extras import execute_values
+import pandas as pd
 
 load_dotenv()
 
@@ -42,42 +43,51 @@ def add_flight(db, flight_data):
     return new_flight
 
 
-def add_flights_bulk(flights_data, batch_size=10000):
-    connection = psycopg2.connect(DATABASE_URI)
-    cursor = connection.cursor()
+def delete_min_date_max_date(db, flights_data):
+    df = pd.DataFrame(flights_data)
+    df["Date"] = pd.to_datetime(df["Date"])
 
-    # Print the table name and column names for debugging
+    result = df.groupby("OriginCountryCode")["Date"].agg(["min", "max"]).reset_index()
+    for _, row in result.iterrows():
+        db.query(Flight).filter(
+            Flight.OriginCountryCode == row["OriginCountryCode"],
+            Flight.Date >= row["min"],
+            Flight.Date <= row["max"],
+        ).delete(synchronize_session=False)
+        db.commit()
+        print(
+            f"Ülke: {row['OriginCountryCode']}, Min Tarih: {row['min']}, Max Tarih: {row['max']}"
+        )
+
+
+def add_flights_bulk(flights_data, batch_size=10000):
+    connection = engine.connect()
+    trans = connection.begin()
+
     print(f"Table Name: {Flight.__tablename__}")
     print("Column Names:", Flight.__table__.columns.keys())
 
-    query = """
-    INSERT INTO "public"."flights" (OriginCountryCode, OriginCityCode, OriginAirportCode, AirlineCode, DestinationCountryCode, DestinationCityCode, DestinationAirportCode, Seat, Date)
-    VALUES %s
-    """
+    query = Flight.__table__.insert()
     values = [
-        (
-            flight["OriginCountryCode"],
-            flight["OriginCityCode"],
-            flight["OriginAirportCode"],
-            flight["AirlineCode"],
-            flight["DestinationCountryCode"],
-            flight["DestinationCityCode"],
-            flight["DestinationAirportCode"],
-            flight["Seat"],
-            flight["Date"],
-        )
+        {
+            "OriginCountryCode": flight["OriginCountryCode"],
+            "OriginCityCode": flight["OriginCityCode"],
+            "OriginAirportCode": flight["OriginAirportCode"],
+            "AirlineCode": flight["AirlineCode"],
+            "DestinationCountryCode": flight["DestinationCountryCode"],
+            "DestinationCityCode": flight["DestinationCityCode"],
+            "DestinationAirportCode": flight["DestinationAirportCode"],
+            "Seat": flight["Seat"],
+            "Date": flight["Date"],
+        }
         for flight in flights_data
     ]
 
-    # Print values for debugging
-    print("Values to be inserted:", values[:5])  # print first 5 values for brevity
-
     for i in range(0, len(values), batch_size):
         batch = values[i : i + batch_size]
-        execute_values(cursor, query, batch)
-        connection.commit()
+        connection.execute(query, batch)
 
-    cursor.close()
+    trans.commit()
     connection.close()
 
 

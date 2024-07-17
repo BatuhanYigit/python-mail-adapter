@@ -86,7 +86,9 @@ def main():
 
     create_tables()
 
-    for item in inbox.filter(subject__contains=subject_keyword):
+    for item in inbox.filter(subject__contains=subject_keyword).order_by(
+        "datetime_received"
+    ):
         print(
             f"İtem Detayları: {{'subject': '{item.subject}', 'sender': '{item.sender.email_address}', 'Okundu : '{item.is_read}}}"
         )

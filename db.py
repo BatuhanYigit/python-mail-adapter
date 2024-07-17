@@ -61,7 +61,6 @@ def delete_min_date_max_date(db, finish_process, flights_data, mail_id):
         )
         log_operation(
             db,
-            datetime.datetime.now(),
             row["OriginCountryCode"],
             row["min"],
             row["max"],
@@ -111,7 +110,6 @@ def add_flights_bulk(db, process_time, mail_id, flights_data, batch_size=10000):
 
     log_operation(
         db,
-        datetime.datetime.now(),
         values[0]["OriginCountryCode"],
         min(flight["Date"] for flight in values),
         max(flight["Date"] for flight in values),
@@ -125,7 +123,6 @@ def add_flights_bulk(db, process_time, mail_id, flights_data, batch_size=10000):
 # Log
 def log_operation(
     db,
-    process_time,
     country_code,
     min_date,
     max_date,
@@ -135,11 +132,11 @@ def log_operation(
     mail_id,
 ):
     log_entry = Log(
-        process_time=process_time,
+        process_time=datetime.datetime.now,
         country_code=country_code,
         min_date=min_date,
         max_date=max_date,
-        process_duration=process_duration,
+        process_csv_duration=process_duration,
         insert_duration=insert_duration,
         mail_id=mail_id,
         operation_type=operation_type,

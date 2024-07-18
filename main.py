@@ -3,6 +3,7 @@ import re
 import requests
 import zipfile
 import pandas as pd
+import numpy as np
 from exchangelib import Credentials, Account, DELEGATE, Message, HTMLBody
 from dotenv import load_dotenv
 from db import (
@@ -48,38 +49,101 @@ def mark_read_mail(item):
     print(f"Mail '{item.subject}' readed")
 
 
-# Csv Process
+# Csv Process 02:01
+# def process_csv(file_path):
+#     df = pd.read_csv(file_path)
+#     df["Time series"] = pd.to_datetime(df["Time series"])
+#     flights_data = []
+#     for _, row in df.iterrows():
+#         flight_data = {
+#             "OriginCountryCode": row["DepIATACtry"],
+#             "OriginCityCode": row["DepCity"],
+#             "OriginAirportCode": row["DepAirport"],
+#             "AirlineCode": row["Carrier1"],
+#             "DestinationCountryCode": row["ArrIATACtry"],
+#             "DestinationCityCode": row["ArrCity"],
+#             "DestinationAirportCode": row["ArrAirport"],
+#             "Seat": row["Seats (Total)"],
+#             "Date": row["Time series"],
+#         }
+#         flights_data.append(flight_data)
+
+#     return flights_data
+
+
+# Pandas Process == 0:17
+# def process_csv(file_path):
+#     df = pd.read_csv(file_path)
+#     df["Time series"] = pd.to_datetime(df["Time series"])
+
+#     # Sütun adlarını yeniden adlandırarak verileri işliyoruz
+#     flights_data = df.rename(
+#         columns={
+#             "DepIATACtry": "OriginCountryCode",
+#             "DepCity": "OriginCityCode",
+#             "DepAirport": "OriginAirportCode",
+#             "Carrier1": "AirlineCode",
+#             "ArrIATACtry": "DestinationCountryCode",
+#             "ArrCity": "DestinationCityCode",
+#             "ArrAirport": "DestinationAirportCode",
+#             "Seats (Total)": "Seat",
+#             "Time series": "Date",
+#         }
+#     )
+
+#     # DataFrame'i bir dizi sözlüğe dönüştürüyoruz
+#     return flights_data.to_dict(orient="records")
+
+
+# Numpy process == 00:10
+
+
 def process_csv(file_path):
     df = pd.read_csv(file_path)
     df["Time series"] = pd.to_datetime(df["Time series"])
-    flights_data = []
-    for _, row in df.iterrows():
-        flight_data = {
-            "OriginCountryCode": row["DepIATACtry"],
-            "OriginCityCode": row["DepCity"],
-            "OriginAirportCode": row["DepAirport"],
-            "AirlineCode": row["Carrier1"],
-            "DestinationCountryCode": row["ArrIATACtry"],
-            "DestinationCityCode": row["ArrCity"],
-            "DestinationAirportCode": row["ArrAirport"],
-            "Seat": row["Seats (Total)"],
-            "Date": row["Time series"],
+
+    flights_data = np.array(
+        df[
+            [
+                "DepIATACtry",
+                "DepCity",
+                "DepAirport",
+                "Carrier1",
+                "ArrIATACtry",
+                "ArrCity",
+                "ArrAirport",
+                "Seats (Total)",
+                "Time series",
+            ]
+        ]
+    )
+
+    return [
+        {
+            "OriginCountryCode": row[0],
+            "OriginCityCode": row[1],
+            "OriginAirportCode": row[2],
+            "AirlineCode": row[3],
+            "DestinationCountryCode": row[4],
+            "DestinationCityCode": row[5],
+            "DestinationAirportCode": row[6],
+            "Seat": row[7],
+            "Date": row[8],
         }
-        flights_data.append(flight_data)
+        for row in flights_data
+    ]
 
-    return flights_data
 
+# # Find min date max date
+# def find_min_date_max_date(flights_data):
+#     df = pd.DataFrame(flights_data)
+#     df["Date"] = pd.to_datetime(df["Date"])
 
-# Find min date max date
-def find_min_date_max_date(flights_data):
-    df = pd.DataFrame(flights_data)
-    df["Date"] = pd.to_datetime(df["Date"])
-
-    result = df.groupby("OriginCountryCode")["Date"].agg(["min", "max"]).reset_index()
-    for _, row in result.iterrows():
-        print(
-            f"Ülke: {row['OriginCountryCode']}, Min Tarih: {row['min']}, Max Tarih: {row['max']}"
-        )
+#     result = df.groupby("OriginCountryCode")["Date"].agg(["min", "max"]).reset_index()
+#     for _, row in result.iterrows():
+#         print(
+#             f"Ülke: {row['OriginCountryCode']}, Min Tarih: {row['min']}, Max Tarih: {row['max']}"
+#         )
 
 
 def main():
@@ -146,7 +210,8 @@ def main():
                     db = next(get_db())
 
                     if check_mail_id(db, mail_id):
-                        print("Mail already process continue ..")
+                        print("Mail ID already process continue ..")
+                        mark_read_mail(item)
                         continue
 
                     print("Start delete time = ", datetime.datetime.now())

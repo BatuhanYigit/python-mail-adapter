@@ -87,13 +87,10 @@ def check_mail_id(db, mail_id):
     return db.query(Log).filter(Log.mail_id == mail_id).first()
 
 
-def add_flights_bulk(db, process_time, mail_id, flights_data, batch_size=30000):
+def add_flights_bulk(db, process_time, mail_id, flights_data, batch_size=10000):
     connection = engine.connect()
     trans = connection.begin()
     start_insert = datetime.datetime.now()
-
-    print(f"Table Name: {Flight.__tablename__}")
-    print("Column Names:", Flight.__table__.columns.keys())
 
     query = Flight.__table__.insert()
     values = [

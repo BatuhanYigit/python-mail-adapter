@@ -114,7 +114,11 @@ def main():
                         f.write(response.content)
                     print(f"File {filename} successfully downloaded.")
 
-                    mail_id = filename.split("_")[-1].replace(".zip", "")
+                    print("Mail iddd : ", item.id)
+
+                    mail_id = item.id
+
+                    # mail_id = filename.split("_")[-1].replace(".zip", "")
 
                     extract_to = "."
                     os.makedirs(extract_to, exist_ok=True)

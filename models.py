@@ -1,4 +1,13 @@
-from sqlalchemy import Column, Integer, String, Date, Interval, TIMESTAMP, Float
+from sqlalchemy import (
+    Column,
+    Integer,
+    String,
+    Date,
+    Interval,
+    TIMESTAMP,
+    Float,
+    VARCHAR,
+)
 from sqlalchemy.ext.declarative import declarative_base
 
 Base = declarative_base()
@@ -27,5 +36,5 @@ class Log(Base):
     max_date = Column(Date)
     process_csv_duration = Column(String)
     insert_duration = Column(String)
-    mail_id = Column(String(50))
+    mail_id = Column(VARCHAR, nullable=False)
     operation_type = Column(String(10), nullable=False)

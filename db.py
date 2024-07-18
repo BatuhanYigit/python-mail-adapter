@@ -60,32 +60,34 @@ def delete_min_date_max_date(db, finish_process, flights_data, mail_id):
             Flight.Date <= row["max"],
         )
 
-        if flights_delete_data.count() == 0:
-            print(f"Data not found. inserting... ")
+        if flights_delete_data.count() > 0:
 
-        try:
-            flights_delete_data.delete(synchronize_session=False)
-            db.commit()
-            log_operation(
-                db,
-                row["OriginCountryCode"],
-                row["min"],
-                row["max"],
-                finish_process,
-                None,
-                "delete",
-                mail_id,
-            )
-        except Exception as e:
-            print(f"Error database {e}")
-            db.rollback()
+            try:
+                flights_delete_data.delete(synchronize_session=False)
+                db.commit()
+                log_operation(
+                    db,
+                    row["OriginCountryCode"],
+                    row["min"],
+                    row["max"],
+                    finish_process,
+                    None,
+                    "delete",
+                    mail_id,
+                )
+            except Exception as e:
+                print(f"Error database {e}")
+                db.rollback()
+
+        elif flights_delete_data.count() == 0:
+            print(f"Data not found. inserting... ")
 
 
 def check_mail_id(db, mail_id):
     return db.query(Log).filter(Log.mail_id == mail_id).first()
 
 
-def add_flights_bulk(db, process_time, mail_id, flights_data, batch_size=10000):
+def add_flights_bulk(db, process_time, mail_id, flights_data, batch_size=30000):
     connection = engine.connect()
     trans = connection.begin()
     start_insert = datetime.datetime.now()
@@ -123,7 +125,7 @@ def add_flights_bulk(db, process_time, mail_id, flights_data, batch_size=10000):
         values[0]["OriginCountryCode"],
         min(flight["Date"] for flight in values),
         max(flight["Date"] for flight in values),
-        None,
+        process_time,
         total_insert_time,
         "insert",
         mail_id,

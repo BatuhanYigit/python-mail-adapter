@@ -21,11 +21,11 @@ class Flight(Base):
 class Log(Base):
     __tablename__ = "logs"
     id = Column(Integer, primary_key=True, index=True)
-    process_time = Column(TIMESTAMP, nullable=False)
+    process_time = Column(Date, nullable=False)
     country_code = Column(String(5), nullable=False)
     min_date = Column(Date)
     max_date = Column(Date)
-    process_csv_duration = Column(Float)
-    insert_duration = Column(Float)
+    process_csv_duration = Column(String)
+    insert_duration = Column(String)
     mail_id = Column(String(50))
     operation_type = Column(String(10), nullable=False)

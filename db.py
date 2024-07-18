@@ -136,18 +136,18 @@ def log_operation(
     country_code,
     min_date,
     max_date,
-    process_duration,
+    process_csv_duration,
     insert_duration,
     operation_type,
     mail_id,
 ):
     log_entry = Log(
-        process_time=datetime.now(),
+        process_time=datetime.datetime.now(),
         country_code=country_code,
         min_date=min_date,
         max_date=max_date,
-        process_csv_duration=process_duration,
-        insert_duration=insert_duration,
+        process_csv_duration=str(process_csv_duration),
+        insert_duration=str(insert_duration),
         mail_id=mail_id,
         operation_type=operation_type,
     )

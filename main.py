@@ -27,7 +27,7 @@ account = Account(
 
 inbox = account.inbox
 
-print("MAILBOX = ", inbox)
+# print("MAILBOX = ", inbox)
 
 sender_email = os.getenv("SENDER_EMAIL")
 subject_keyword = os.getenv("SUBJECT_KEYWORD")
@@ -120,9 +120,13 @@ def main():
                     os.makedirs(extract_to, exist_ok=True)
                     extract_zip(filename, extract_to)
 
-                    csv_file = [
-                        f for f in os.listdir(extract_to) if f.endswith(".csv")
-                    ][0]
+                    # csv_file = [
+                    #     f for f in os.listdir(extract_to) if f.endswith(".csv")
+                    # ][0]
+
+                    csv_file = filename.replace(".zip", ".csv")
+
+                    print("csvvvvvvvv == ", csv_file)
 
                     start_process = datetime.datetime.now()
 

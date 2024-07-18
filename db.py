@@ -50,25 +50,35 @@ def delete_min_date_max_date(db, finish_process, flights_data, mail_id):
 
     result = df.groupby("OriginCountryCode")["Date"].agg(["min", "max"]).reset_index()
     for _, row in result.iterrows():
-        db.query(Flight).filter(
-            Flight.OriginCountryCode == row["OriginCountryCode"],
-            Flight.Date >= row["min"],
-            Flight.Date <= row["max"],
-        ).delete(synchronize_session=False)
-        db.commit()
         print(
             f"Ülke: {row['OriginCountryCode']}, Min Tarih: {row['min']}, Max Tarih: {row['max']}"
         )
-        log_operation(
-            db,
-            row["OriginCountryCode"],
-            row["min"],
-            row["max"],
-            finish_process,
-            None,
-            "delete",
-            mail_id,
+
+        flights_delete_data = db.query(Flight).filter(
+            Flight.OriginCountryCode == row["OriginCountryCode"],
+            Flight.Date >= row["min"],
+            Flight.Date <= row["max"],
         )
+
+        if flights_delete_data.count() == 0:
+            print(f"Data not found. inserting... ")
+
+        try:
+            flights_delete_data.delete(synchronize_session=False)
+            db.commit()
+            log_operation(
+                db,
+                row["OriginCountryCode"],
+                row["min"],
+                row["max"],
+                finish_process,
+                None,
+                "delete",
+                mail_id,
+            )
+        except Exception as e:
+            print(f"Error database {e}")
+            db.rollback()
 
 
 def check_mail_id(db, mail_id):
@@ -132,7 +142,7 @@ def log_operation(
     mail_id,
 ):
     log_entry = Log(
-        process_time=datetime.datetime.now,
+        process_time=datetime.now(),
         country_code=country_code,
         min_date=min_date,
         max_date=max_date,

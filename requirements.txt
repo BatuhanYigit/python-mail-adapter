@@ -1,0 +1,7 @@
+exchangelib
+pandas
+numpy
+python-dotenv
+sqlalchemy
+psycopg2-binary
+requests
